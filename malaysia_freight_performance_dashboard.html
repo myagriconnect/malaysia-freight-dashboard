@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Malaysia Freight Performance Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy:    #0D3349;
+  --navym:   #1A4D66;
+  --olive:   #6B8C00;
+  --yg:      #BFCF40;
+  --yl:      #D4DC72;
+  --bg:      #DDE2DC;
+}
+body { font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: #1a1a1a; font-size: 13px; }
+
+/* ── HEADER ── */
+.main-header { background: var(--navy); color: #fff; text-align: center; padding: 13px 0 10px; font-size: 20px; font-weight: bold; letter-spacing: 2.5px; }
+.header-sub  { font-size: 10.5px; font-weight: normal; letter-spacing: 1.5px; color: var(--yg); margin-top: 3px; }
+
+/* ── MAIN NAV ── */
+.main-nav { background: var(--navy); display: flex; justify-content: center; border-bottom: 3px solid var(--olive); }
+.mn-tab { color: rgba(255,255,255,.82); padding: 9px 28px; cursor: pointer; font-size: 13px; font-weight: bold; border: none; background: transparent; letter-spacing: .4px; border-bottom: 3px solid transparent; margin-bottom: -3px; transition: background .15s; }
+.mn-tab:hover { background: var(--navym); color: #fff; }
+.mn-tab.active { background: var(--olive); color: #fff; border-bottom: 3px solid var(--yg); }
+
+/* ── DASHBOARD CARD ── */
+.dashboard { max-width: 960px; margin: 13px auto 28px; background: #fff; border: 1px solid #bbb; box-shadow: 0 3px 12px rgba(0,0,0,.14); }
+
+/* ── SECTION HEADER ── */
+.sec-hdr { background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; }
+.sec-title { font-size: 15px; font-weight: bold; display: flex; align-items: center; gap: 10px; letter-spacing: .5px; }
+.sec-title .si { font-size: 24px; }
+.yr-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.yr-label { font-size: 10px; color: rgba(255,255,255,.7); font-style: italic; }
+.yr-wrap select { background: #fff; color: var(--navy); border: 1px solid #ccc; padding: 3px 8px; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 2px; }
+
+/* ── SUB NAV ── */
+.sub-nav { background: var(--navy); display: flex; align-items: stretch; }
+.sn-label { color: rgba(255,255,255,.78); padding: 7px 12px; font-size: 10px; font-style: italic; white-space: nowrap; display: flex; align-items: center; border-right: 1px solid rgba(255,255,255,.15); min-width: 115px; line-height: 1.45; }
+.sn-tabs { display: flex; flex: 1; }
+.sn-tab { color: rgba(255,255,255,.82); padding: 7px 14px; cursor: pointer; font-size: 10.5px; font-weight: bold; background: transparent; border: none; border-right: 1px solid rgba(255,255,255,.14); letter-spacing: .3px; transition: background .15s; }
+.sn-tab:hover:not(.active) { background: var(--navym); }
+.sn-tab.active { background: var(--olive); color: #fff; }
+
+/* ── CONTENT & DIVIDERS ── */
+.content { padding: 18px 20px 20px; }
+.blk-hdr { font-weight: bold; font-size: 12.5px; color: var(--navy); border-bottom: 2.5px solid var(--navy); padding-bottom: 5px; margin-bottom: 13px; display: flex; align-items: center; gap: 7px; }
+.blk-hdr .period { font-weight: normal; font-style: italic; font-size: 11px; color: #555; }
+.sec-div { border: none; border-top: 2px solid #dde; margin: 18px 0; }
+
+/* ── KPI INLINE ── */
+.kpi-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.kpi-lbl { font-size: 12px; color: #333; }
+.kpi-box { background: var(--yg); padding: 5px 16px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #90a010; }
+.kpi-val { font-size: 20px; font-weight: bold; color: var(--navy); }
+.kpi-unit { font-size: 11px; color: #444; }
+
+/* ── CHART WRAP ── */
+.chart-wrap { position: relative; width: 100%; }
+
+/* ── LEGEND ── */
+.legend { display: flex; gap: 18px; margin-top: 8px; flex-wrap: wrap; }
+.li { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #333; }
+.ls { width: 20px; height: 13px; display: inline-block; border: 1px solid rgba(0,0,0,.1); }
+.ll { width: 24px; height: 3px; display: inline-block; margin-bottom: 1px; }
+
+/* ── PORT PRODUCTIVITY CARDS ── */
+.prod-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.prod-card { background: var(--navy); color: #fff; padding: 12px 16px; display: flex; align-items: center; gap: 13px; border-radius: 2px; }
+.prod-card.mid { background: var(--navym); }
+.pc-icon { font-size: 28px; line-height: 1; }
+.pc-lbl { font-size: 11px; font-weight: bold; color: rgba(255,255,255,.82); margin-bottom: 4px; }
+.pc-val { font-size: 20px; font-weight: bold; }
+.pc-sub { font-size: 10px; color: rgba(255,255,255,.62); margin-top: 2px; }
+
+/* ── PORT PERFORMANCE SUB-NAV ── */
+.pnav { display: flex; background: var(--navy); margin-bottom: 14px; }
+.pt { color: rgba(255,255,255,.82); padding: 6px 13px; font-size: 10.5px; font-weight: bold; cursor: pointer; border: none; background: transparent; border-right: 1px solid rgba(255,255,255,.14); transition: background .15s; }
+.pt:hover:not(.active) { background: var(--navym); }
+.pt.active { background: var(--olive); color: #fff; }
+
+/* ── PORT LAYOUT ── */
+.port-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.pmap-lbl { font-weight: bold; font-size: 11px; color: var(--navy); margin-bottom: 8px; text-transform: uppercase; }
+.pmap-row { display: flex; gap: 10px; align-items: flex-start; }
+.plist-lbl { font-weight: bold; font-size: 10.5px; color: var(--navy); margin-bottom: 5px; }
+.plist { list-style: none; padding: 0; }
+.plist li { font-size: 10.5px; color: #333; padding: 2px 0; display: flex; align-items: center; gap: 6px; }
+.plist li::before { content:''; width:8px; height:8px; background:var(--yg); border:1px solid #777; border-radius:50%; flex-shrink:0; }
+.ts-title { font-weight: bold; font-size: 11px; color: var(--navy); margin-bottom: 2px; }
+.ts-sub { font-weight: normal; font-size: 10.5px; color: #555; }
+
+/* ── ECONOMICS TAB ── */
+.econ-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.ppi-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 6px; }
+.ppi-table th { background: var(--navy); color: #fff; padding: 7px 10px; text-align: left; font-size: 11px; }
+.ppi-table td { padding: 6px 10px; border-bottom: 1px solid #eee; }
+.ppi-table tr.cpi-row td { background: #f0f4e8; font-style: italic; border-top: 2px solid var(--olive); }
+.ppi-table tr:hover:not(.cpi-row) td { background: #f8f9f4; }
+.pos { color: #2a7a2a; font-weight: bold; }
+.neg { color: #aa2222; font-weight: bold; }
+.emp-layout { display: flex; gap: 14px; align-items: flex-start; margin-top: 8px; }
+.emp-text { font-size: 11.5px; color: #333; line-height: 1.55; flex: 1; }
+.emp-donut { width: 130px; flex-shrink: 0; }
+
+/* ── SUSTAINABILITY TAB ── */
+.sus-layout { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-top: 4px; }
+.sus-text { font-size: 11.5px; color: #333; line-height: 1.6; margin-bottom: 10px; }
+.sus-donut-text { font-size: 11px; color: #333; line-height: 1.5; margin-top: 8px; text-align: center; }
+
+/* ── DEVELOPMENT TAB ── */
+.dev-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.dev-select-wrap { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #555; }
+.dev-select-wrap select { border: 1px solid #ccc; padding: 4px 8px; font-size: 11px; cursor: pointer; border-radius: 2px; }
+.dev-projects { margin-top: 14px; }
+.dev-proj-title { font-weight: bold; font-size: 11px; color: var(--navy); margin-bottom: 7px; text-transform: uppercase; }
+.dev-proj-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dev-proj-item { background: #f0f4e8; border-left: 3px solid var(--olive); padding: 7px 10px; font-size: 10.5px; line-height: 1.45; }
+.dev-proj-item strong { color: var(--navy); display: block; margin-bottom: 2px; font-size: 11px; }
+
+/* ── DATA NOTE ── */
+.data-note { background: #f0f4e8; border-left: 3px solid var(--olive); padding: 6px 10px; font-size: 10px; color: #555; margin-top: 12px; }
+
+/* ── FOOTER ── */
+.dash-footer { background: var(--navy); color: rgba(255,255,255,.82); padding: 8px 18px; font-size: 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dash-footer strong { color: #fff; letter-spacing: .3px; }
+
+/* ── VISIBILITY ── */
+.panel { display: none; }
+.panel.active { display: block; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.placeholder { padding: 44px; text-align: center; color: #888; font-size: 14px; }
+.placeholder .phi { font-size: 40px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="main-header">
+  MALAYSIA FREIGHT PERFORMANCE DASHBOARD
+  <div class="header-sub">PAPAN PEMUKA PRESTASI FRET MALAYSIA &nbsp;|&nbsp; MINISTRY OF TRANSPORT MALAYSIA</div>
+</div>
+
+<!-- MAIN NAV -->
+<div class="main-nav">
+  <button class="mn-tab" onclick="switchMain(this,'p-summary')">Freight Summary</button>
+  <button class="mn-tab" onclick="switchMain(this,'p-airports')">Airports</button>
+  <button class="mn-tab active" onclick="switchMain(this,'p-ports')">Ports</button>
+  <button class="mn-tab" onclick="switchMain(this,'p-rail')">Rail</button>
+  <button class="mn-tab" onclick="switchMain(this,'p-road')">Road</button>
+</div>
+
+<div class="dashboard">
+  <div class="panel" id="p-summary"><div class="placeholder"><div class="phi">📊</div><strong>Freight Summary</strong><br><span style="font-size:12px">All-mode overview across Ports, Rail, Road and Air</span></div></div>
+  <div class="panel" id="p-airports"><div class="placeholder"><div class="phi">✈️</div><strong>Airports</strong><br><span style="font-size:12px">Air cargo — KLIA, klia2, Penang International, Kota Kinabalu International</span></div></div>
+  <div class="panel" id="p-rail"><div class="placeholder"><div class="phi">🚂</div><strong>Rail</strong><br><span style="font-size:12px">Rail freight — KTM Cargo, ECRL, Keretapi Tanah Melayu freight corridors</span></div></div>
+  <div class="panel" id="p-road"><div class="placeholder"><div class="phi">🚛</div><strong>Road</strong><br><span style="font-size:12px">Road freight — heavy vehicles, North-South Expressway, JB-Singapore corridor</span></div></div>
+
+  <!-- ═══════════════════ PORTS PANEL ═══════════════════ -->
+  <div class="panel active" id="p-ports">
+
+    <div class="sec-hdr">
+      <div class="sec-title"><span class="si">⚓</span> PERFORMANCE OF MALAYSIAN PORTS</div>
+      <div class="yr-wrap">
+        <span class="yr-label">Select a report year:</span>
+        <select id="yearSel" onchange="onYearChange(this.value)">
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+          <option value="2022">2022</option>
+          <option value="2021">2021</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sub-nav">
+      <div class="sn-label">Ports statistics<br>focus:</div>
+      <div class="sn-tabs">
+        <button class="sn-tab active"  onclick="switchSub(this,'st-activity')">ACTIVITY</button>
+        <button class="sn-tab" onclick="switchSub(this,'st-economics')">ECONOMICS</button>
+        <button class="sn-tab" onclick="switchSub(this,'st-incidents')">INCIDENTS</button>
+        <button class="sn-tab" onclick="switchSub(this,'st-sustainability')">SUSTAINABILITY</button>
+        <button class="sn-tab" onclick="switchSub(this,'st-gender')">GENDER</button>
+        <button class="sn-tab" onclick="switchSub(this,'st-development')">DEVELOPMENT</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ─── ACTIVITY ─── -->
+      <div class="tab-content active" id="st-activity">
+        <div class="blk-hdr">🚢 CONTAINER THROUGHPUT <span class="period">&nbsp;(year ending December)</span></div>
+        <div class="kpi-row">
+          <span class="kpi-lbl">Total TEUs handled at Malaysian ports in <strong id="a-year">2024</strong>:</span>
+          <div class="kpi-box"><span class="kpi-val" id="a-teu">30.1</span><span class="kpi-unit">Million TEUs</span></div>
+        </div>
+        <div class="chart-wrap" style="height:215px;"><canvas id="actChart"></canvas></div>
+        <div class="legend">
+          <div class="li"><span class="ls" style="background:#0D3349;"></span>Port Klang</div>
+          <div class="li"><span class="ls" style="background:#6B8C00;"></span>Port of Tanjung Pelepas</div>
+          <div class="li"><span class="ls" style="background:#D4DC72;"></span>Other Ports</div>
+          <div class="li"><span class="ll" style="background:#CC3300;"></span>Total</div>
+        </div>
+      </div>
+
+      <!-- ─── ECONOMICS ─── -->
+      <div class="tab-content" id="st-economics">
+        <div class="econ-grid">
+          <div>
+            <div class="blk-hdr">💹 PRODUCER PRICE INDEX <span class="period">&nbsp;(June quarter)</span></div>
+            <table class="ppi-table">
+              <thead><tr><th>Sector</th><th>Index</th><th>Year on year change</th></tr></thead>
+              <tbody id="ppiBody"></tbody>
+            </table>
+            <div class="data-note" style="margin-top:8px;">Base year 2010 = 100. Source: DOSM Producer Price Index (Services) — water transport sub-sector estimates.</div>
+          </div>
+          <div>
+            <div class="blk-hdr">👷 EMPLOYMENT <span class="period">&nbsp;(month of August)</span></div>
+            <div class="emp-layout">
+              <div class="emp-text" id="empText">Loading…</div>
+              <div class="emp-donut">
+                <div class="chart-wrap" style="height:130px;"><canvas id="empDonut"></canvas></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── INCIDENTS ─── -->
+      <div class="tab-content" id="st-incidents">
+        <div class="blk-hdr">⚠️ MARITIME FATALITIES <span class="period">&nbsp;(Year ending December)</span></div>
+        <div class="kpi-row">
+          <span class="kpi-lbl">Deaths recorded in <strong id="i-year">2024</strong>:</span>
+          <div class="kpi-box"><span class="kpi-val" id="i-deaths">28</span></div>
+        </div>
+        <div class="chart-wrap" style="height:210px;"><canvas id="incChart"></canvas></div>
+        <div class="data-note" style="margin-top:10px;">Maritime fatalities include vessel collisions, capsizing, man-overboard incidents and port accidents. Source: Malaysian Maritime Enforcement Agency (MMEA) / Marine Department Malaysia (JLM).</div>
+      </div>
+
+      <!-- ─── SUSTAINABILITY ─── -->
+      <div class="tab-content" id="st-sustainability">
+        <div class="blk-hdr">🌿 EMISSIONS <span class="period">&nbsp;(Year ending December)</span></div>
+        <div class="sus-layout">
+          <div>
+            <p class="sus-text" id="susText">Loading…</p>
+            <div class="chart-wrap" style="height:185px;"><canvas id="susLine"></canvas></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div class="chart-wrap" style="height:160px;width:160px;"><canvas id="susDonut"></canvas></div>
+            <p class="sus-donut-text" id="susDonutText">Loading…</p>
+          </div>
+        </div>
+        <div class="data-note" style="margin-top:10px;">Domestic maritime emissions (Gg CO₂ equivalent) cover vessels in Malaysian waters. Source: Malaysia's Biennial Update Report to UNFCCC / DOSM Environmental Accounts.</div>
+      </div>
+
+      <!-- ─── GENDER ─── -->
+      <div class="tab-content" id="st-gender">
+        <div class="blk-hdr">👥 EMPLOYEE GENDER BREAKDOWN <span class="period">&nbsp;(calendar year)</span></div>
+        <div class="kpi-row">
+          <span class="kpi-lbl">% female in water transport sector in <strong id="g-year">2024</strong>:</span>
+          <div class="kpi-box"><span class="kpi-val" id="g-pct">19.3%</span></div>
+        </div>
+        <div class="chart-wrap" style="height:215px;"><canvas id="genChart"></canvas></div>
+        <div class="legend">
+          <div class="li"><span class="ls" style="background:#D4DC72;"></span>Female</div>
+          <div class="li"><span class="ls" style="background:#6B8C00;"></span>Male</div>
+          <div class="li"><span class="ll" style="background:#0D3349;"></span>Water transport total</div>
+        </div>
+        <div class="data-note" style="margin-top:10px;">Includes port operators, shipping companies, marine department personnel and harbour services. Source: DOSM Labour Force Survey / MOT Annual Report.</div>
+      </div>
+
+      <!-- ─── DEVELOPMENT ─── -->
+      <div class="tab-content" id="st-development">
+        <div class="blk-hdr">🏗️ PORT CONSTRUCTION VALUE <span class="period">&nbsp;(year ending June)</span></div>
+        <div class="dev-top">
+          <div class="kpi-row" style="margin-bottom:0;">
+            <span class="kpi-lbl">Total port infrastructure investment in <strong id="d-year">2024</strong>:</span>
+            <div class="kpi-box"><span class="kpi-val" id="d-val">RM 4,200M</span></div>
+          </div>
+          <div class="dev-select-wrap">
+            <span>Construction sector:</span>
+            <select id="devSector" onchange="updateDevChart()">
+              <option value="all">All Sectors</option>
+              <option value="public">Public Sector</option>
+              <option value="private">Private Sector</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:200px;"><canvas id="devChart"></canvas></div>
+        <div class="legend">
+          <div class="li"><span class="ls" style="background:#D4DC72;"></span>Port &amp; harbour infrastructure</div>
+          <div class="li"><span class="ls" style="background:#0D3349;"></span>Total transport infrastructure</div>
+          <div class="li"><span class="ll" style="background:#CC3300;"></span>Port investment trend</div>
+        </div>
+        <div class="dev-projects">
+          <div class="dev-proj-title">MAJOR PORT DEVELOPMENT PROJECTS (ONGOING)</div>
+          <div class="dev-proj-grid">
+            <div class="dev-proj-item"><strong>Carey Island Mega Port — Port Klang</strong>RM 28 billion | Capacity: 36M TEUs/yr | Target: 2040</div>
+            <div class="dev-proj-item"><strong>Westports Expansion (Phase 2)</strong>RM 39.6 billion over 40 years | 14M → 27M TEUs capacity</div>
+            <div class="dev-proj-item"><strong>Penang Port Expansion (4 Phases)</strong>RM 1.5 billion | New container berths &amp; logistics hub</div>
+            <div class="dev-proj-item"><strong>Tanjung Embang Deep-Sea Port, Sarawak</strong>RM 25–30 billion | Gas terminal &amp; deep-sea berths</div>
+            <div class="dev-proj-item"><strong>Lumut Maritime Industrial City (LuMIC), Perak</strong>RM 72 billion over 25 yrs | Joint dev. with Port of Antwerp-Bruges</div>
+            <div class="dev-proj-item"><strong>Kuala Linggi International Port</strong>USD 3.15 billion | Tank storage, shipyard, cargo wharves</div>
+          </div>
+        </div>
+        <div class="data-note" style="margin-top:10px;">Port construction values in RM million. Public sector includes MOT, CIDB &amp; state government works. Private sector includes port operator capex. Source: CIDB, MOT Annual Report, company reports.</div>
+      </div>
+
+      <!-- ═══ SHARED BOTTOM: PORT PRODUCTIVITY ═══ -->
+      <hr class="sec-div">
+      <div class="blk-hdr">📊 PORT PRODUCTIVITY OVERVIEW <span class="period">&nbsp;(year ending December)</span></div>
+      <div class="prod-row">
+        <div class="prod-card">
+          <div class="pc-icon">📦</div>
+          <div><div class="pc-lbl">Total TEUs Handled</div><div class="pc-val" id="p-teu">30.1M</div><div class="pc-sub">All Malaysian ports</div></div>
+        </div>
+        <div class="prod-card mid">
+          <div class="pc-icon">🚢</div>
+          <div><div class="pc-lbl">Vessel Calls</div><div class="pc-val" id="p-vessels">45,280</div><div class="pc-sub">Total port arrivals</div></div>
+        </div>
+        <div class="prod-card">
+          <div class="pc-icon">⚓</div>
+          <div><div class="pc-lbl">Total Cargo</div><div class="pc-val" id="p-cargo">545 Mt</div><div class="pc-sub">Million tonnes, all types</div></div>
+        </div>
+      </div>
+
+      <!-- ═══ SHARED BOTTOM: PERFORMANCE BY PORT ═══ -->
+      <hr class="sec-div">
+      <div class="blk-hdr">PERFORMANCE BY PORT</div>
+      <div class="pnav">
+        <button class="pt active" onclick="switchPort(this,'export-value')">EXPORT VALUE</button>
+        <button class="pt" onclick="switchPort(this,'export-weight')">EXPORT WEIGHT</button>
+        <button class="pt" onclick="switchPort(this,'import-value')">IMPORT VALUE</button>
+        <button class="pt" onclick="switchPort(this,'import-weight')">IMPORT WEIGHT</button>
+        <button class="pt" onclick="switchPort(this,'teu-exchanged')">TEU EXCHANGED</button>
+      </div>
+      <div class="port-layout">
+        <div>
+          <div class="pmap-lbl">Available Ports:</div>
+          <div class="pmap-row">
+            <!-- Compact map: Peninsular (orig x 0-280) + Borneo (orig x 500-1000) side by side -->
+            <!-- ViewBox 0 0 780 332 = 280px Peninsular + 500px Borneo, gap removed -->
+            <div style="flex-shrink:0;border:1px solid #aaa;background:#B8D4E8;line-height:0;">
+              <svg viewBox="0 0 780 332" width="400" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:block;">
+                <defs>
+                  <clipPath id="cp-pen"><rect x="0"   y="0" width="280" height="332"/></clipPath>
+                  <clipPath id="cp-bor"><rect x="280" y="0" width="500" height="332"/></clipPath>
+                </defs>
+                <!-- Peninsular Malaysia: show original x=0–280 unchanged -->
+                <image href="my.svg" x="0"    y="0" width="1000" height="332" clip-path="url(#cp-pen)"/>
+                <!-- Borneo: original x=500–1000, shifted left by 220 so it starts at x=280 -->
+                <image href="my.svg" x="-220" y="0" width="1000" height="332" clip-path="url(#cp-bor)"/>
+
+                <!-- ── Peninsular ports (original coords unchanged) ── -->
+                <circle cx="75"  cy="115" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
+                <text   x="84"  y="110"  font-size="11" fill="#111" font-weight="bold">Penang</text>
+                <circle cx="115" cy="205" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
+                <text   x="82"  y="218"  font-size="11" fill="#111" font-weight="bold">Port Klang</text>
+                <circle cx="185" cy="278" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
+                <text   x="148" y="294"  font-size="11" fill="#111" font-weight="bold">PTP / Johor</text>
+                <circle cx="222" cy="190" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
+                <text   x="230" y="186"  font-size="11" fill="#111" font-weight="bold">Kuantan</text>
+                <circle cx="210" cy="148" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
+                <text   x="218" y="144"  font-size="11" fill="#111" font-weight="bold">Kemaman</text>
+
+                <!-- ── Borneo ports: original_x − 220 ── -->
+                <!-- Kuching: orig 648 → 428 -->
+                <circle cx="428" cy="268" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
+                <text   x="436" cy="268" y="264"  font-size="11" fill="#111" font-weight="bold">Kuching</text>
+                <!-- Bintulu: orig 730 → 510 -->
+                <circle cx="510" cy="192" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
+                <text   x="518" y="188"  font-size="11" fill="#111" font-weight="bold">Bintulu</text>
+                <!-- Miri: orig 776 → 556 -->
+                <circle cx="556" cy="172" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
+                <text   x="564" y="168"  font-size="11" fill="#111" font-weight="bold">Miri</text>
+                <!-- KK: orig 806 → 586 -->
+                <circle cx="586" cy="158" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
+                <text   x="594" y="154"  font-size="11" fill="#111" font-weight="bold">KK</text>
+                <!-- Sandakan: orig 878 → 658 -->
+                <circle cx="658" cy="140" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
+                <text   x="666" y="136"  font-size="11" fill="#111" font-weight="bold">Sandakan</text>
+
+                <text x="6" y="328" font-size="9" fill="#888">Source: MOT Malaysia / Port Authorities</text>
+              </svg>
+            </div>
+            <div style="margin-left:10px;">
+              <div class="plist-lbl">Selected<br>ports:</div>
+              <ul class="plist">
+                <li>Port Klang</li><li>Port of Tanjung Pelepas</li><li>Penang Port</li>
+                <li>Johor Port</li><li>Kuantan Port</li><li>Kemaman Port</li>
+                <li>Bintulu Port</li><li>Kota Kinabalu</li><li>Miri Port</li><li>Sandakan Port</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;">
+          <div class="ts-title">TIME SERIES DATA:<br><span class="ts-sub" id="tsSubtitle">Value of sea freight exports (RM billion, constant prices)</span></div>
+          <div class="chart-wrap" style="height:178px;margin-top:8px;flex:1;"><canvas id="tsChart"></canvas></div>
+          <div class="legend" style="margin-top:8px;">
+            <div class="li"><span class="ll" style="background:#BFCF40;margin-bottom:1px;"></span>Total for selected port/s</div>
+            <div class="li"><span class="ls" style="background:#0D3349;"></span>Malaysia national total</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+
+    <div class="dash-footer">
+      <strong>DATA SOURCES:</strong>
+      <span>Ministry of Transport Malaysia (MOT)</span>&nbsp;|&nbsp;
+      <span>Port Klang Authority (PKA)</span>&nbsp;|&nbsp;
+      <span>Malaysian Ports Association (MPA)</span>&nbsp;|&nbsp;
+      <span>Dept. of Statistics Malaysia (DOSM)</span>&nbsp;|&nbsp;
+      <span>MMEA / Marine Dept. Malaysia (JLM)</span>&nbsp;|&nbsp;
+      <span>World Bank LPI 2023</span>&nbsp;|&nbsp;
+      <span>CIDB Malaysia</span>
+    </div>
+  </div><!-- /p-ports -->
+</div><!-- /dashboard -->
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════════════════
+
+// ACTIVITY
+const ACT_LBL = ['2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'];
+const D_KLANG = [10.4,10.9,11.0,11.0,11.0,12.3,12.3,11.3,13.8,13.2,14.1,14.6];
+const D_PTP   = [7.5,8.0,8.5,9.0,9.5,9.9,9.8,9.4,11.0,10.5,10.5,12.3];
+const D_OTHER = [3.5,3.7,3.9,3.9,4.2,3.5,4.1,3.9,3.5,3.6,3.2,3.2];
+const D_TOTAL = D_KLANG.map((v,i)=>+(v+D_PTP[i]+D_OTHER[i]).toFixed(1));
+const TEU_KPI = {'2024':'30.1','2023':'27.8','2022':'27.3','2021':'28.3'};
+
+// ECONOMICS — PPI
+const PPI = {
+  '2024':[
+    {s:'Water freight transport',        r:142.5, y:3.1},
+    {s:'Port stevedoring services',      r:113.2, y:2.4},
+    {s:'Water transport support svcs',   r:124.8, y:1.6},
+    {s:'Port & terminal operations',     r:118.8, y:2.1},
+    {s:'Freight forwarding & logistics', r:136.8, y:3.3},
+    {s:'Compared to CPI (National)',     r:108.2, y:2.3, cpi:true},
+  ],
+  '2023':[
+    {s:'Water freight transport',        r:138.2, y:-6.9},
+    {s:'Port stevedoring services',      r:110.5, y:-2.0},
+    {s:'Water transport support svcs',   r:122.8, y:-2.1},
+    {s:'Port & terminal operations',     r:116.4, y:-1.5},
+    {s:'Freight forwarding & logistics', r:132.4, y:-8.8},
+    {s:'Compared to CPI (National)',     r:105.8, y:2.2, cpi:true},
+  ],
+  '2022':[
+    {s:'Water freight transport',        r:148.5, y:28.3},
+    {s:'Port stevedoring services',      r:112.8, y:6.2},
+    {s:'Water transport support svcs',   r:125.4, y:3.5},
+    {s:'Port & terminal operations',     r:118.2, y:2.8},
+    {s:'Freight forwarding & logistics', r:145.2, y:12.4},
+    {s:'Compared to CPI (National)',     r:103.5, y:3.5, cpi:true},
+  ],
+  '2021':[
+    {s:'Water freight transport',        r:115.7, y:15.2},
+    {s:'Port stevedoring services',      r:106.2, y:4.8},
+    {s:'Water transport support svcs',   r:116.8, y:2.1},
+    {s:'Port & terminal operations',     r:113.4, y:1.9},
+    {s:'Freight forwarding & logistics', r:118.5, y:8.4},
+    {s:'Compared to CPI (National)',     r:100.4, y:2.5, cpi:true},
+  ],
+};
+
+// ECONOMICS — Employment
+const EMP = {
+  '2024':{jobs:'49,200', pct:'3.3', total:'0.28', m:3.3, nm:96.7},
+  '2023':{jobs:'48,000', pct:'3.2', total:'0.27', m:3.2, nm:96.8},
+  '2022':{jobs:'46,000', pct:'3.1', total:'0.26', m:3.1, nm:96.9},
+  '2021':{jobs:'44,000', pct:'3.0', total:'0.25', m:3.0, nm:97.0},
+};
+
+// INCIDENTS
+const INC_LBL = ['2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'];
+const INC_D   = [45,52,38,43,61,48,35,28,42,37,31,28];
+const INC_KPI = {'2024':28,'2023':31,'2022':37,'2021':42};
+
+// SUSTAINABILITY
+const SUS_YRS = [2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023];
+const SUS_D   = [1180,1240,1320,1420,1580,1720,1850,1980,1920,1780,1950,2100,2250,2400,2520,2680,2820,2980,3180,3380,2680,3120,3620,3520];
+const SUS_KPI = {
+  '2024':{gg:'3,415', chg:'-3.0',  pct:'7.0'},
+  '2023':{gg:'3,520', chg:'+16.4', pct:'7.2'},
+  '2022':{gg:'3,620', chg:'+16.0', pct:'7.4'},
+  '2021':{gg:'3,120', chg:'+16.4', pct:'6.8'},
+};
+
+// GENDER
+const GEN_LBL = ['2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'];
+const GEN_TOT = [36000,37500,38500,39500,41000,42500,43000,44000,44500,43000,41000,44000,46000,48000,49200];
+const GEN_FEM = [6840,7125,7315,7505,7790,8075,8170,8360,8460,8170,7790,8360,8740,9072,9496];
+const GEN_MAL = GEN_TOT.map((t,i)=>t-GEN_FEM[i]);
+const GEN_KPI = {'2024':'19.3%','2023':'18.9%','2022':'19.0%','2021':'18.5%'};
+
+// DEVELOPMENT
+const DEV_LBL  = ['2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'];
+const DEV_PORT = [850,1200,1800,2200,1500,1100,980,1200,1500,800,950,1300,1600,2100,2400,2200,1800,1900,2300,2500,1200,1800,2800,3500,4200];
+const DEV_TRANS= [4200,5800,7200,8500,6100,5200,4800,5600,6800,3800,4500,6200,7500,9800,11200,10800,8900,9400,11500,12800,6200,9500,14500,18200,22000];
+const DEV_KPI  = {'2024':'RM 4,200M','2023':'RM 3,500M','2022':'RM 2,800M','2021':'RM 1,800M'};
+
+// PORT PRODUCTIVITY
+const PROD = {
+  '2024':{teu:'30.1M', vessels:'45,280', cargo:'545 Mt'},
+  '2023':{teu:'27.8M', vessels:'43,150', cargo:'520 Mt'},
+  '2022':{teu:'27.3M', vessels:'42,800', cargo:'530 Mt'},
+  '2021':{teu:'28.3M', vessels:'41,500', cargo:'545 Mt'},
+};
+
+// PORT TIME SERIES
+const TS_LBL = ['2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'];
+const PORT_TS = {
+  'export-value':  {sub:'Value of sea freight exports (RM billion, constant prices)',    tot:[612,575,582,660,700,685,807,1018,1271,1169,1148], sel:[428,403,407,462,490,480,565,713,890,818,804]},
+  'export-weight': {sub:'Weight of sea freight exports (million tonnes)',                tot:[485,490,498,520,545,532,498,545,530,520,545],    sel:[340,343,349,364,382,372,349,382,371,364,382]},
+  'import-value':  {sub:'Value of sea freight imports (RM billion, constant prices)',    tot:[428,408,392,456,496,482,525,648,849,795,768],    sel:[300,286,274,319,347,337,368,454,594,557,538]},
+  'import-weight': {sub:'Weight of sea freight imports (million tonnes)',                tot:[198,195,200,210,225,218,198,225,218,212,225],    sel:[139,137,140,147,158,153,139,158,153,148,158]},
+  'teu-exchanged': {sub:'Total TEUs exchanged at selected ports (million TEUs)',         tot:[22.6,23.4,23.9,24.7,25.7,26.2,24.6,28.3,27.3,27.8,30.1], sel:[20.4,21.1,21.5,22.2,23.1,23.6,22.2,25.5,24.6,25.0,27.1]},
+};
+
+// ══════════════════════════════════════════════════════════════
+// CHART INSTANCES & LAZY INIT
+// ══════════════════════════════════════════════════════════════
+const C = {};
+const INIT = {activity:false, economics:false, incidents:false, sustainability:false, gender:false, development:false};
+let curYear = '2024';
+let curPort = 'export-value';
+
+// ── ACTIVITY ──
+function initActivity() {
+  if (INIT.activity) return;
+  const ctx1 = document.getElementById('actChart').getContext('2d');
+  C.act = new Chart(ctx1, {
+    data:{labels:ACT_LBL, datasets:[
+      {type:'bar',  label:'Port Klang', data:[...D_KLANG], backgroundColor:'#0D3349', stack:'s0', order:2},
+      {type:'bar',  label:'PTP',        data:[...D_PTP],   backgroundColor:'#6B8C00', stack:'s0', order:2},
+      {type:'bar',  label:'Others',     data:[...D_OTHER], backgroundColor:'#D4DC72', stack:'s0', order:2},
+      {type:'line', label:'Total',      data:[...D_TOTAL],
+        borderColor:'#CC3300', backgroundColor:'transparent', borderWidth:2.5,
+        pointRadius:3, pointBackgroundColor:'#CC3300', tension:0.2, order:1, yAxisID:'y'},
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{mode:'index', callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y.toFixed(1)}M TEUs`}}},
+      scales:{
+        x:{stacked:true, grid:{display:false}, ticks:{font:{size:10}, maxRotation:0}},
+        y:{stacked:true, beginAtZero:true, max:34,
+          title:{display:true, text:'Million TEUs', font:{size:10}, color:'#555'},
+          ticks:{font:{size:10}}, grid:{color:'#eee'}},
+      }
+    }
+  });
+  // Time-series chart
+  const ctx2 = document.getElementById('tsChart').getContext('2d');
+  const d = PORT_TS[curPort];
+  C.ts = new Chart(ctx2, {
+    data:{labels:TS_LBL, datasets:[
+      {type:'bar',  label:'Malaysia national total',   data:[...d.tot], backgroundColor:'#0D3349', order:2},
+      {type:'line', label:'Total for selected port/s', data:[...d.sel],
+        borderColor:'#BFCF40', backgroundColor:'transparent', borderWidth:2.5,
+        pointRadius:3, pointBackgroundColor:'#BFCF40', tension:0.2, order:1},
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{mode:'index'}},
+      scales:{x:{grid:{display:false}, ticks:{font:{size:10}}}, y:{beginAtZero:false, ticks:{font:{size:10}}, grid:{color:'#eee'}}},
+    }
+  });
+  INIT.activity = true;
+}
+
+// ── ECONOMICS ──
+function initEconomics() {
+  if (INIT.economics) return;
+  const ctx = document.getElementById('empDonut').getContext('2d');
+  const e = EMP[curYear];
+  C.emp = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels:['Water transport','Other transport sectors'],
+      datasets:[{data:[e.m, e.nm], backgroundColor:['#BFCF40','#0D3349'], borderColor:'#fff', borderWidth:2}]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed.toFixed(1)}%`}}}},
+  });
+  renderPPI(curYear);
+  renderEmpText(curYear);
+  INIT.economics = true;
+}
+function renderPPI(yr) {
+  const rows = PPI[yr];
+  document.getElementById('ppiBody').innerHTML = rows.map(r => {
+    const sign = r.y >= 0 ? '+' : '';
+    const cls  = r.y >= 0 ? 'pos' : 'neg';
+    const rowCls = r.cpi ? ' class="cpi-row"' : '';
+    return `<tr${rowCls}><td>${r.s}</td><td>${r.r.toFixed(2)}</td><td class="${cls}">${sign}${r.y.toFixed(2)}%</td></tr>`;
+  }).join('');
+}
+function renderEmpText(yr) {
+  const e = EMP[yr];
+  document.getElementById('empText').innerHTML =
+    `In August ${yr}, water transport accounted for <strong>${e.jobs} jobs</strong>. This was <strong>${e.pct}%</strong> of total transport, postal and warehousing industry employment and <strong>${e.total}%</strong> of total Malaysian employment.`;
+}
+function updateEmpDonut(yr) {
+  if (!C.emp) return;
+  const e = EMP[yr];
+  C.emp.data.datasets[0].data = [e.m, e.nm];
+  C.emp.update('none');
+}
+
+// ── INCIDENTS ──
+function initIncidents() {
+  if (INIT.incidents) return;
+  const ctx = document.getElementById('incChart').getContext('2d');
+  C.inc = new Chart(ctx, {
+    type:'bar',
+    data:{labels:INC_LBL, datasets:[{
+      label:'Maritime fatalities',
+      data:[...INC_D],
+      backgroundColor:INC_LBL.map((l,i)=> l===curYear ? '#CC3300' : '#0D3349'),
+      borderRadius:2,
+    }]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`Deaths: ${c.parsed.y}`}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{size:10}}},
+        y:{beginAtZero:true, max:75, ticks:{font:{size:10}}, grid:{color:'#eee'},
+          title:{display:true, text:'Number of fatalities', font:{size:10}, color:'#555'}},
+      }
+    }
+  });
+  INIT.incidents = true;
+}
+function highlightIncYear(yr) {
+  if (!C.inc) return;
+  C.inc.data.datasets[0].backgroundColor = INC_LBL.map(l=> l===yr ? '#CC3300' : '#0D3349');
+  C.inc.update('none');
+}
+
+// ── SUSTAINABILITY ──
+function initSustainability() {
+  if (INIT.sustainability) return;
+  const ctx1 = document.getElementById('susLine').getContext('2d');
+  C.susL = new Chart(ctx1, {
+    type:'line',
+    data:{labels:SUS_YRS.map(String), datasets:[{
+      label:'Maritime CO₂ (Gg CO₂e)',
+      data:[...SUS_D],
+      borderColor:'#6B8C00', backgroundColor:'rgba(191,207,64,0.15)',
+      borderWidth:2, pointRadius:0, fill:true, tension:0.3,
+    }]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.parsed.y.toLocaleString()} Gg CO₂e`}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{size:10}, maxTicksLimit:7}},
+        y:{beginAtZero:true, title:{display:true, text:'Gg CO₂ equivalent', font:{size:10}, color:'#555'}, ticks:{font:{size:10}}, grid:{color:'#eee'}},
+      }
+    }
+  });
+  const ctx2 = document.getElementById('susDonut').getContext('2d');
+  const k = SUS_KPI[curYear];
+  C.susD = new Chart(ctx2, {
+    type:'doughnut',
+    data:{labels:['Maritime','Other transport'],
+      datasets:[{data:[parseFloat(k.pct), +(100-parseFloat(k.pct)).toFixed(1)],
+        backgroundColor:['#BFCF40','#0D3349'], borderColor:'#fff', borderWidth:2}]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'58%',
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed.toFixed(1)}%`}}}},
+  });
+  renderSusKPI(curYear);
+  INIT.sustainability = true;
+}
+function renderSusKPI(yr) {
+  const k = SUS_KPI[yr];
+  document.getElementById('susText').innerHTML =
+    `In ${yr} domestic maritime emissions reached <strong>${k.gg} gigagrams</strong> of CO₂ equivalent, changing <strong>${k.chg}%</strong> from the previous year.`;
+  document.getElementById('susDonutText').innerHTML =
+    `${yr} saw domestic maritime account for <strong>${k.pct}%</strong> of direct greenhouse gas emissions from transport.`;
+}
+function updateSusDonut(yr) {
+  if (!C.susD) return;
+  const k = SUS_KPI[yr];
+  C.susD.data.datasets[0].data = [parseFloat(k.pct), +(100-parseFloat(k.pct)).toFixed(1)];
+  C.susD.update('none');
+}
+
+// ── GENDER ──
+function initGender() {
+  if (INIT.gender) return;
+  const ctx = document.getElementById('genChart').getContext('2d');
+  C.gen = new Chart(ctx, {
+    data:{labels:GEN_LBL, datasets:[
+      {type:'bar',  label:'Female',               data:[...GEN_FEM], backgroundColor:'#D4DC72', stack:'s0', order:2},
+      {type:'bar',  label:'Male',                 data:[...GEN_MAL], backgroundColor:'#6B8C00', stack:'s0', order:2},
+      {type:'line', label:'Water transport total', data:[...GEN_TOT],
+        borderColor:'#0D3349', backgroundColor:'transparent', borderWidth:2.5,
+        pointRadius:2.5, pointBackgroundColor:'#0D3349', tension:0.2, order:1},
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{mode:'index', callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y.toLocaleString()}`}}},
+      scales:{
+        x:{stacked:true, grid:{display:false}, ticks:{font:{size:10}, maxRotation:0}},
+        y:{stacked:true, beginAtZero:true,
+          title:{display:true, text:'Staff (number)', font:{size:10}, color:'#555'},
+          ticks:{font:{size:10}, callback:v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}, grid:{color:'#eee'}},
+      }
+    }
+  });
+  INIT.gender = true;
+}
+
+// ── DEVELOPMENT ──
+function getDevData(sector) {
+  const pf = sector==='public'?0.4 : sector==='private'?0.6 : 1.0;
+  const tf = sector==='public'?0.55: sector==='private'?0.45: 1.0;
+  return [DEV_PORT.map(v=>+(v*pf).toFixed(0)), DEV_TRANS.map(v=>+(v*tf).toFixed(0))];
+}
+function initDevelopment() {
+  if (INIT.development) return;
+  const ctx = document.getElementById('devChart').getContext('2d');
+  const [portD, transD] = getDevData('all');
+  C.dev = new Chart(ctx, {
+    data:{labels:DEV_LBL, datasets:[
+      {type:'bar',  label:'Port & harbour',        data:[...portD],  backgroundColor:'#D4DC72', order:2},
+      {type:'bar',  label:'Total transport infra', data:[...transD], backgroundColor:'#0D3349', order:2},
+      {type:'line', label:'Port investment trend', data:[...portD],
+        borderColor:'#CC3300', backgroundColor:'transparent', borderWidth:2,
+        pointRadius:1.5, pointBackgroundColor:'#CC3300', tension:0.35, order:1},
+    ]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{mode:'index', callbacks:{label:c=>`${c.dataset.label}: RM ${c.parsed.y.toLocaleString()}M`}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{size:9}, maxRotation:45, maxTicksLimit:13}},
+        y:{beginAtZero:true, title:{display:true, text:'RM million', font:{size:10}, color:'#555'},
+          ticks:{font:{size:10}, callback:v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}, grid:{color:'#eee'}},
+      }
+    }
+  });
+  INIT.development = true;
+}
+function updateDevChart() {
+  if (!C.dev) return;
+  const sec = document.getElementById('devSector').value;
+  const [portD, transD] = getDevData(sec);
+  C.dev.data.datasets[0].data = portD;
+  C.dev.data.datasets[1].data = transD;
+  C.dev.data.datasets[2].data = portD;
+  C.dev.update('none');
+}
+
+// ══════════════════════════════════════════════════════════════
+// INTERACTIVITY
+// ══════════════════════════════════════════════════════════════
+function switchMain(el, pid) {
+  document.querySelectorAll('.mn-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(pid).classList.add('active');
+}
+
+const INIT_FNS = {activity:initActivity, economics:initEconomics, incidents:initIncidents,
+  sustainability:initSustainability, gender:initGender, development:initDevelopment};
+
+function switchSub(el, sid) {
+  document.querySelectorAll('.sn-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(p=>p.classList.remove('active'));
+  document.getElementById(sid).classList.add('active');
+  const key = sid.replace('st-','');
+  if (INIT_FNS[key]) setTimeout(()=>INIT_FNS[key](), 30);
+}
+
+function switchPort(el, key) {
+  document.querySelectorAll('.pt').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  curPort = key;
+  if (!C.ts) return;
+  const d = PORT_TS[key];
+  document.getElementById('tsSubtitle').textContent = d.sub;
+  C.ts.data.labels = TS_LBL;
+  C.ts.data.datasets[0].data = [...d.tot];
+  C.ts.data.datasets[1].data = [...d.sel];
+  C.ts.update('none');
+}
+
+function onYearChange(yr) {
+  curYear = yr;
+  // Activity
+  document.getElementById('a-year').textContent = yr;
+  document.getElementById('a-teu').textContent  = TEU_KPI[yr];
+  // Incidents
+  document.getElementById('i-year').textContent   = yr;
+  document.getElementById('i-deaths').textContent = INC_KPI[yr];
+  highlightIncYear(yr);
+  // Sustainability
+  renderSusKPI(yr);
+  updateSusDonut(yr);
+  // Gender
+  document.getElementById('g-year').textContent = yr;
+  document.getElementById('g-pct').textContent  = GEN_KPI[yr];
+  // Development
+  document.getElementById('d-year').textContent = yr;
+  document.getElementById('d-val').textContent  = DEV_KPI[yr];
+  // Economics
+  renderPPI(yr);
+  renderEmpText(yr);
+  updateEmpDonut(yr);
+  // Productivity cards
+  const p = PROD[yr];
+  document.getElementById('p-teu').textContent     = p.teu;
+  document.getElementById('p-vessels').textContent = p.vessels;
+  document.getElementById('p-cargo').textContent   = p.cargo;
+}
+
+// INIT
+document.addEventListener('DOMContentLoaded', () => {
+  initActivity();
+  renderPPI(curYear);
+  renderEmpText(curYear);
+});
+</script>
+</body>
+</html>
