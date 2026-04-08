@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Malaysia Freight Performance Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>.leaflet-container { font-family: Arial, sans-serif; }</style>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -158,7 +161,202 @@ body { font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: 
 <div class="dashboard">
   <div class="panel" id="p-summary"><div class="placeholder"><div class="phi">📊</div><strong>Freight Summary</strong><br><span style="font-size:12px">All-mode overview across Ports, Rail, Road and Air</span></div></div>
   <div class="panel" id="p-airports"><div class="placeholder"><div class="phi">✈️</div><strong>Airports</strong><br><span style="font-size:12px">Air cargo — KLIA, klia2, Penang International, Kota Kinabalu International</span></div></div>
-  <div class="panel" id="p-rail"><div class="placeholder"><div class="phi">🚂</div><strong>Rail</strong><br><span style="font-size:12px">Rail freight — KTM Cargo, ECRL, Keretapi Tanah Melayu freight corridors</span></div></div>
+  <!-- ═══════════════════ RAIL PANEL ═══════════════════ -->
+  <div class="panel" id="p-rail">
+    <!-- Section Header -->
+    <div class="sec-hdr">
+      <div class="sec-title"><span class="si">🚂</span> PERFORMANCE OF MALAYSIAN RAIL</div>
+      <div class="yr-wrap">
+        <span class="yr-label">Select a report year:</span>
+        <select id="r-yrSel" onchange="rlYearChange(this.value)">
+          <option>2024</option><option>2023</option><option>2022</option>
+          <option>2021</option><option>2020</option><option>2019</option>
+          <option>2018</option><option>2017</option><option>2016</option>
+          <option>2015</option><option>2014</option><option>2013</option>
+        </select>
+      </div>
+    </div>
+    <!-- Sub-nav -->
+    <div class="sub-nav">
+      <div class="sn-label">Rail statistics<br>focus:</div>
+      <div class="sn-tabs">
+        <button class="sn-tab active" onclick="rlSwitchSub(this,'rst-activity')">ACTIVITY</button>
+        <button class="sn-tab" onclick="rlSwitchSub(this,'rst-economics')">ECONOMICS</button>
+        <button class="sn-tab" onclick="rlSwitchSub(this,'rst-incidents')">INCIDENTS</button>
+        <button class="sn-tab" onclick="rlSwitchSub(this,'rst-sustainability')">SUSTAINABILITY</button>
+        <button class="sn-tab" onclick="rlSwitchSub(this,'rst-gender')">GENDER</button>
+        <button class="sn-tab" onclick="rlSwitchSub(this,'rst-development')">CONSTRUCTION</button>
+      </div>
+    </div>
+
+    <!-- ── ACTIVITY ── -->
+    <div id="rst-activity" class="tab-content active">
+      <div class="content">
+        <div class="blk-hdr">🚂 RAIL FREIGHT <span class="period">(year ending December)</span></div>
+        <div class="kpi-row">
+          <span class="kpi-lbl">Million tonne-km of freight moved in <strong id="ra-year">2024</strong>:</span>
+          <span class="kpi-box"><span class="kpi-val" id="ra-tkm">1,150</span><span class="kpi-unit">M tkm</span></span>
+        </div>
+        <div class="chart-wrap" style="height:210px;"><canvas id="r-actChart"></canvas></div>
+        <div class="legend" style="margin-top:8px;">
+          <div class="li"><span class="ls" style="background:#6B8C00;"></span>Bulk</div>
+          <div class="li"><span class="ls" style="background:#0D3349;"></span>Non-bulk</div>
+          <div class="li"><span class="ll" style="background:#CC3300;"></span>Total</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ECONOMICS ── -->
+    <div id="rst-economics" class="tab-content">
+      <div class="content">
+        <div class="econ-grid">
+          <div>
+            <div class="blk-hdr">$ PRODUCER PRICE INDEX <span class="period">(year ending June)</span></div>
+            <table class="ppi-table">
+              <thead><tr><th>Index</th><th>Rate</th><th>Year on year change</th></tr></thead>
+              <tbody id="r-ppiBody"></tbody>
+            </table>
+            <div class="blk-hdr" style="margin-top:16px;">📊 GROSS VALUE ADDED <span class="period">(year ending June)</span></div>
+            <div class="chart-wrap" style="height:140px;"><canvas id="r-gvaChart"></canvas></div>
+            <div class="legend" style="margin-top:6px;">
+              <div class="li"><span class="ls" style="background:#6B8C00;"></span>Rail &amp; pipeline</div>
+              <div class="li"><span class="ls" style="background:#0D3349;"></span>Transport, postal &amp; warehousing total</div>
+            </div>
+          </div>
+          <div>
+            <div class="blk-hdr">👥 EMPLOYMENT <span class="period">(month of August)</span></div>
+            <div class="emp-layout">
+              <div class="emp-text" id="r-empText"></div>
+              <div class="emp-donut"><canvas id="r-empDonut"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── INCIDENTS ── -->
+    <div id="rst-incidents" class="tab-content">
+      <div class="content">
+        <div class="blk-hdr">➕ RAIL FATALITIES <span class="period">(Year ending December)</span></div>
+        <div class="kpi-row">
+          <span class="kpi-lbl">Deaths recorded in <strong id="ri-year">2024</strong>:</span>
+          <span class="kpi-box"><span class="kpi-val" id="ri-deaths">10</span></span>
+        </div>
+        <div class="chart-wrap" style="height:195px;"><canvas id="r-incChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── SUSTAINABILITY ── -->
+    <div id="rst-sustainability" class="tab-content">
+      <div class="content">
+        <div class="blk-hdr">🌿 EMISSIONS <span class="period">(Year ending June)</span></div>
+        <div class="sus-layout">
+          <div>
+            <div class="sus-text" id="r-susText"></div>
+            <div class="chart-wrap" style="height:155px;"><canvas id="r-susChart"></canvas></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div style="width:130px;height:130px;"><canvas id="r-susDonut"></canvas></div>
+            <div class="sus-donut-text" id="r-susDonutText"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GENDER ── -->
+    <div id="rst-gender" class="tab-content">
+      <div class="content">
+        <div class="blk-hdr">👥 EMPLOYEE GENDER BREAKDOWN <span class="period">(calendar year)</span></div>
+        <div class="kpi-row">
+          <span class="kpi-lbl">% female in <strong id="rg-year">2024</strong>:</span>
+          <span class="kpi-box"><span class="kpi-val" id="rg-pct">24.0</span><span class="kpi-unit">%</span></span>
+        </div>
+        <div class="chart-wrap" style="height:200px;"><canvas id="r-genChart"></canvas></div>
+        <div class="legend" style="margin-top:8px;">
+          <div class="li"><span class="ls" style="background:#BFCF40;"></span>Female</div>
+          <div class="li"><span class="ls" style="background:#6B8C00;"></span>Male</div>
+          <div class="li"><span class="ll" style="background:#0D3349;"></span>Rail transport total</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DEVELOPMENT / CONSTRUCTION ── -->
+    <div id="rst-development" class="tab-content">
+      <div class="content">
+        <div class="blk-hdr">🏗️ RAIL CONSTRUCTION VALUE <span class="period">(year ending June)</span></div>
+        <div class="dev-top">
+          <div class="kpi-row" style="margin:0;">
+            <span class="kpi-lbl">Total value (RM million) of rail infrastructure construction in <strong id="rd-year">2024</strong>:</span>
+            <span class="kpi-box"><span class="kpi-val" id="rd-val">14,500</span></span>
+          </div>
+          <div class="dev-select-wrap">
+            Construction sector
+            <select id="r-secSel" onchange="rlUpdateDev()">
+              <option value="all">Total</option>
+              <option value="pub">Public</option>
+              <option value="priv">Private</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:195px;"><canvas id="r-devChart"></canvas></div>
+        <div class="legend" style="margin-top:8px;">
+          <div class="li"><span class="ls" style="background:#6B8C00;"></span>Rail infrastructure construction</div>
+          <div class="li"><span class="ls" style="background:#0D3349;"></span>Total transport infrastructure construction</div>
+        </div>
+        <div class="dev-projects" style="margin-top:14px;">
+          <div class="dev-proj-title">MAJOR RAIL INFRASTRUCTURE PROJECTS</div>
+          <div class="dev-proj-grid">
+            <div class="dev-proj-item"><strong>East Coast Rail Link (ECRL)</strong>RM 50.3 billion | 688 km | KL–Kota Bharu | Est. completion: 2026</div>
+            <div class="dev-proj-item"><strong>MRT Putrajaya Line (MRT2)</strong>RM 30.5 billion | 52.2 km | Completed March 2023</div>
+            <div class="dev-proj-item"><strong>LRT3 (Shah Alam Line)</strong>RM 16.6 billion | 37.8 km | Klang Valley | Completed 2024</div>
+            <div class="dev-proj-item"><strong>MRT Circle Line (MRT3)</strong>RM 31.7 billion | 50.8 km | Klang Valley | Under planning</div>
+            <div class="dev-proj-item"><strong>KTM Electrified Double Tracking</strong>RM 12.0 billion | Seremban–Gemas &amp; Ipoh–Padang Besar | Completed</div>
+            <div class="dev-proj-item"><strong>Penang LRT</strong>RM 9.9 billion | 22.8 km | Proposed | Phase 1 planning</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SHARED BOTTOM: EQUIPMENT STOCK + CORRIDORS ══ -->
+    <div class="content" style="border-top:2.5px solid #dde;padding-top:16px;">
+      <!-- Equipment Stock -->
+      <div class="blk-hdr" style="margin-bottom:10px;">🚆 TRAIN OPERATOR EQUIPMENT STOCK <span class="period">(calendar year)</span></div>
+      <div class="prod-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
+        <div class="prod-card"><div class="pc-icon">🚂</div><div><div class="pc-lbl">Freight Locomotives</div><div class="pc-val" id="r-eq-loco">62</div><div class="pc-sub">KTM Kargo diesel-electric</div></div></div>
+        <div class="prod-card mid"><div class="pc-icon">🚊</div><div><div class="pc-lbl">Light Rail (LRT/Mono)</div><div class="pc-val" id="r-eq-lrt">528</div><div class="pc-sub">Prasarana LRT &amp; Monorail</div></div></div>
+        <div class="prod-card"><div class="pc-icon">🚇</div><div><div class="pc-lbl">Urban Heavy Rail (MRT)</div><div class="pc-val" id="r-eq-mrt">172</div><div class="pc-sub">Prasarana MRT Kajang &amp; Putrajaya</div></div></div>
+        <div class="prod-card mid"><div class="pc-icon">🚄</div><div><div class="pc-lbl">Intercity / ETS Trains</div><div class="pc-val" id="r-eq-ets">38</div><div class="pc-sub">KTM Electric Train Service</div></div></div>
+      </div>
+
+      <!-- Intermodal Transit Time by Corridor -->
+      <div style="background:var(--navy);color:#fff;text-align:center;padding:8px 0;font-size:12px;font-weight:bold;letter-spacing:.5px;margin-bottom:0;">
+        INTERMODAL TRANSIT TIME BY CORRIDOR
+      </div>
+      <div class="pnav" id="r-corrNav">
+        <button class="pt active" onclick="rlSwitchCorr(this,0)">KL to<br>Penang</button>
+        <button class="pt" onclick="rlSwitchCorr(this,1)">KL to<br>Ipoh</button>
+        <button class="pt" onclick="rlSwitchCorr(this,2)">KL to<br>JB</button>
+        <button class="pt" onclick="rlSwitchCorr(this,3)">KL to<br>Kota Bharu</button>
+        <button class="pt" onclick="rlSwitchCorr(this,4)">Gemas to<br>JB</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:0;">
+        <div>
+          <div class="ts-title" style="margin-top:10px;">SEGMENTS:</div>
+          <div id="railMapContainer" style="width:100%;height:195px;border:1px solid #aaa;margin-top:6px;z-index:0;"></div>
+        </div>
+        <div>
+          <div class="ts-title" style="margin-top:10px;">TIME SERIES DATA:<br><span class="ts-sub" id="r-corrTitle">KL to Penang</span></div>
+          <div class="chart-wrap" style="height:160px;margin-top:8px;"><canvas id="r-tsChart"></canvas></div>
+          <div class="legend" style="margin-top:6px;">
+            <div class="li"><span class="ll" style="background:#6B8C00;"></span><span id="r-corrLegend">KL to Penang</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="data-note" style="margin-top:14px;">
+        DATA SOURCES: <strong>MOT Malaysia Transport Statistics | KTM Berhad Annual Report | Prasarana Malaysia | DOSM | NIMP 2030 Rail Industry Report | Malaysia BUR4 UNFCCC</strong>
+      </div>
+    </div>
+  </div><!-- end p-rail -->
   <div class="panel" id="p-road"><div class="placeholder"><div class="phi">🚛</div><strong>Road</strong><br><span style="font-size:12px">Road freight — heavy vehicles, North-South Expressway, JB-Singapore corridor</span></div></div>
 
   <!-- ═══════════════════ PORTS PANEL ═══════════════════ -->
@@ -342,51 +540,7 @@ body { font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: 
         <div>
           <div class="pmap-lbl">Available Ports:</div>
           <div class="pmap-row">
-            <!-- Compact map: Peninsular (orig x 0-280) + Borneo (orig x 500-1000) side by side -->
-            <!-- ViewBox 0 0 780 332 = 280px Peninsular + 500px Borneo, gap removed -->
-            <div style="flex-shrink:0;border:1px solid #aaa;background:#B8D4E8;line-height:0;">
-              <svg viewBox="0 0 780 332" width="400" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:block;">
-                <defs>
-                  <clipPath id="cp-pen"><rect x="0"   y="0" width="280" height="332"/></clipPath>
-                  <clipPath id="cp-bor"><rect x="280" y="0" width="500" height="332"/></clipPath>
-                </defs>
-                <!-- Peninsular Malaysia: show original x=0–280 unchanged -->
-                <image href="my.svg" x="0"    y="0" width="1000" height="332" clip-path="url(#cp-pen)"/>
-                <!-- Borneo: original x=500–1000, shifted left by 220 so it starts at x=280 -->
-                <image href="my.svg" x="-220" y="0" width="1000" height="332" clip-path="url(#cp-bor)"/>
-
-                <!-- ── Peninsular ports (original coords unchanged) ── -->
-                <circle cx="75"  cy="115" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
-                <text   x="84"  y="110"  font-size="11" fill="#111" font-weight="bold">Penang</text>
-                <circle cx="115" cy="205" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
-                <text   x="82"  y="218"  font-size="11" fill="#111" font-weight="bold">Port Klang</text>
-                <circle cx="185" cy="278" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
-                <text   x="148" y="294"  font-size="11" fill="#111" font-weight="bold">PTP / Johor</text>
-                <circle cx="222" cy="190" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
-                <text   x="230" y="186"  font-size="11" fill="#111" font-weight="bold">Kuantan</text>
-                <circle cx="210" cy="148" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
-                <text   x="218" y="144"  font-size="11" fill="#111" font-weight="bold">Kemaman</text>
-
-                <!-- ── Borneo ports: original_x − 220 ── -->
-                <!-- Kuching: orig 648 → 428 -->
-                <circle cx="428" cy="268" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
-                <text   x="436" cy="268" y="264"  font-size="11" fill="#111" font-weight="bold">Kuching</text>
-                <!-- Bintulu: orig 730 → 510 -->
-                <circle cx="510" cy="192" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
-                <text   x="518" y="188"  font-size="11" fill="#111" font-weight="bold">Bintulu</text>
-                <!-- Miri: orig 776 → 556 -->
-                <circle cx="556" cy="172" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
-                <text   x="564" y="168"  font-size="11" fill="#111" font-weight="bold">Miri</text>
-                <!-- KK: orig 806 → 586 -->
-                <circle cx="586" cy="158" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
-                <text   x="594" y="154"  font-size="11" fill="#111" font-weight="bold">KK</text>
-                <!-- Sandakan: orig 878 → 658 -->
-                <circle cx="658" cy="140" r="6.5" fill="#BFCF40" stroke="#444" stroke-width="1.2"/>
-                <text   x="666" y="136"  font-size="11" fill="#111" font-weight="bold">Sandakan</text>
-
-                <text x="6" y="328" font-size="9" fill="#888">Source: MOT Malaysia / Port Authorities</text>
-              </svg>
-            </div>
+            <div id="portMapContainer" style="width:400px;height:210px;flex-shrink:0;border:1px solid #aaa;z-index:0;"></div>
             <div style="margin-left:10px;">
               <div class="plist-lbl">Selected<br>ports:</div>
               <ul class="plist">
@@ -759,6 +913,19 @@ function switchMain(el, pid) {
   el.classList.add('active');
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById(pid).classList.add('active');
+  if (pid==='p-rail') {
+    setTimeout(()=>{
+      rlInitActivity();
+      rlInitCorridorChart();
+      rlRenderPPI(rlCurYear);
+      rlRenderEmpText(rlCurYear);
+      initRailMap();
+      if (railMap) railMap.invalidateSize();
+    }, 80);
+  }
+  if (pid==='p-ports') {
+    setTimeout(()=>{ if (portMap) portMap.invalidateSize(); }, 80);
+  }
 }
 
 const INIT_FNS = {activity:initActivity, economics:initEconomics, incidents:initIncidents,
@@ -816,11 +983,470 @@ function onYearChange(yr) {
 }
 
 // INIT
+/* ═══════════════════════════════════════════════
+   LEAFLET MAPS — PORTS + RAIL CORRIDORS
+═══════════════════════════════════════════════ */
+
+/* ── Port locations ── */
+const PORT_LOCS = [
+  {name:'Penang Port',           lat:5.4141,  lng:100.3449},
+  {name:'Port Klang',            lat:3.0016,  lng:101.3984},
+  {name:'Port of Tanjung Pelepas (PTP)', lat:1.3624, lng:103.5516},
+  {name:'Johor Port',            lat:1.4647,  lng:103.7308},
+  {name:'Kuantan Port',          lat:3.8333,  lng:103.3500},
+  {name:'Kemaman Port',          lat:4.2333,  lng:103.4167},
+  {name:'Kuching Port',          lat:1.5533,  lng:110.3592},
+  {name:'Bintulu Port',          lat:3.1700,  lng:113.0333},
+  {name:'Miri Port',             lat:4.3833,  lng:113.9833},
+  {name:'Kota Kinabalu Port',    lat:5.9749,  lng:116.0724},
+  {name:'Sandakan Port',         lat:5.8333,  lng:118.1167},
+];
+
+/* ── Rail city nodes ── */
+const RAIL_NODES = {
+  KL:    {lat:3.1347,  lng:101.6867, label:'KL Sentral'},
+  Penang:{lat:5.3985,  lng:100.3720, label:'Butterworth'},
+  Ipoh:  {lat:4.5921,  lng:101.0901, label:'Ipoh'},
+  JB:    {lat:1.4647,  lng:103.7308, label:'JB Sentral'},
+  KB:    {lat:6.1254,  lng:102.2381, label:'Kota Bharu'},
+  Gemas: {lat:2.5833,  lng:102.5833, label:'Gemas'},
+};
+const RAIL_ROUTES = [
+  {from:'KL',    to:'Penang'},
+  {from:'KL',    to:'Ipoh'},
+  {from:'KL',    to:'JB'},
+  {from:'KL',    to:'KB'},
+  {from:'Gemas', to:'JB'},
+];
+
+/* ── Shared icon factory ── */
+function makeIcon(color='#BFCF40', size=13) {
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:${size}px;height:${size}px;background:${color};border:2px solid #333;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4);"></div>`,
+    iconSize:[size,size], iconAnchor:[size/2,size/2], popupAnchor:[0,-size/2]
+  });
+}
+
+/* ── PORT MAP ── */
+let portMap = null;
+function initPortMap() {
+  if (portMap) return;
+  portMap = L.map('portMapContainer', {
+    center:[4.2, 109.5], zoom:5,
+    scrollWheelZoom:false, attributionControl:true
+  });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom:18
+  }).addTo(portMap);
+  const icon = makeIcon('#BFCF40', 14);
+  PORT_LOCS.forEach(p => {
+    L.marker([p.lat, p.lng], {icon})
+      .addTo(portMap)
+      .bindPopup(`<strong style="color:#0D3349;font-size:12px;">${p.name}</strong>`);
+  });
+  setTimeout(()=>portMap.invalidateSize(), 150);
+}
+
+/* ── RAIL CORRIDOR MAP ── */
+let railMap = null, railRoutePoly = null;
+function initRailMap() {
+  if (railMap) return;
+  railMap = L.map('railMapContainer', {
+    center:[4.0, 102.5], zoom:6,
+    scrollWheelZoom:false, attributionControl:true
+  });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom:18
+  }).addTo(railMap);
+  const icon = makeIcon('#BFCF40', 11);
+  Object.values(RAIL_NODES).forEach(n => {
+    L.marker([n.lat, n.lng], {icon})
+      .addTo(railMap)
+      .bindPopup(`<strong style="color:#0D3349;font-size:11px;">${n.label}</strong>`);
+  });
+  rlDrawRoute(0);
+  setTimeout(()=>railMap.invalidateSize(), 150);
+}
+function rlDrawRoute(idx) {
+  if (!railMap) return;
+  const r = RAIL_ROUTES[idx];
+  const a = RAIL_NODES[r.from], b = RAIL_NODES[r.to];
+  if (railRoutePoly) railMap.removeLayer(railRoutePoly);
+  railRoutePoly = L.polyline([[a.lat,a.lng],[b.lat,b.lng]], {
+    color:'#CC3300', weight:3.5, dashArray:'7,5', opacity:0.9
+  }).addTo(railMap);
+  railMap.fitBounds([[a.lat,a.lng],[b.lat,b.lng]], {padding:[30,30], maxZoom:8});
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initActivity();
   renderPPI(curYear);
   renderEmpText(curYear);
+  initPortMap();   /* ports tab is active by default */
 });
+
+/* ═══════════════════════════════════════════════
+   RAIL TAB — DATA & LOGIC
+═══════════════════════════════════════════════ */
+const RL_YRS = ['2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'];
+
+/* Activity: Rail freight (million tonne-km), Bulk + Non-bulk */
+const RL_BULK    = [668,680,691,674,653,623,594,581,560,514,368,434,486,506,518];
+const RL_NONBULK = [814,830,844,824,797,762,726,709,685,628,450,531,594,619,632];
+const RL_TOTAL   = RL_BULK.map((v,i)=>v+RL_NONBULK[i]);
+const RL_ACT_KPI = {'2024':'1,150','2023':'1,125','2022':'1,080','2021':'965','2020':'818',
+  '2019':'1,142','2018':'1,245','2017':'1,290','2016':'1,320','2015':'1,385',
+  '2014':'1,450','2013':'1,498'};
+
+/* Incidents: Rail fatalities 2005-2024 */
+const RL_INC_LBL = ['2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'];
+const RL_INC_D   = [32,28,35,29,24,28,24,19,22,18,16,14,12,15,13,8,11,14,12,10];
+const RL_INC_KPI = {'2024':10,'2023':12,'2022':14,'2021':11,'2020':8,'2019':13,'2018':15,'2017':12,'2016':14,'2015':16,'2014':18,'2013':22};
+
+/* Sustainability: CO2 Gg 2000-2023 */
+const RL_SUS_YRS = ['2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010',
+  '2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023'];
+const RL_SUS_D   = [320,335,352,368,385,408,432,458,482,505,498,512,528,542,558,572,568,552,548,542,426,462,491,478];
+const RL_SUS_KPI = {'2024':'478','2023':'478','2022':'491','2021':'462','2020':'426','2019':'542',
+  '2018':'548','2017':'552','2016':'568','2015':'572','2014':'558','2013':'542'};
+const RL_SUS_PCT = {'2024':1.8,'2023':1.8,'2022':1.9,'2021':1.7,'2020':1.6,'2019':2.0,
+  '2018':2.0,'2017':2.1,'2016':2.1,'2015':2.2,'2014':2.2,'2013':2.2};
+
+/* Gender: workforce 2010-2024 */
+const RL_GEN_TOT = [18200,18800,19400,20100,20800,21600,22400,23100,23800,24200,24500,24800,25100,25500,25800];
+const RL_GEN_FEM = [2548,2726,2910,3115,3328,3564,3808,4019,4284,4598,4900,5208,5522,5865,6192];
+const RL_GEN_MAL = RL_GEN_TOT.map((t,i)=>t-RL_GEN_FEM[i]);
+const RL_GEN_KPI = {'2024':'24.0','2023':'23.0','2022':'22.0','2021':'21.0','2020':'20.0',
+  '2019':'17.7','2018':'18.0','2017':'17.0','2016':'17.0','2015':'16.5','2014':'16.0','2013':'15.5'};
+
+/* Development: RM million 2000-2024 */
+const RL_DEV_YRS  = ['2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010',
+  '2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024'];
+const RL_DEV_RAIL = [850,920,980,880,950,1200,1350,1800,2200,2800,4500,6800,8200,9500,10200,11800,13200,16500,14800,13200,9800,12500,15200,16800,14500];
+const RL_DEV_TRAN = [6800,7200,7500,7100,7600,8500,9200,11500,13800,16200,22500,31800,36500,40200,42800,48500,52200,58500,54800,51200,38500,48500,58200,62800,55500];
+const RL_DEV_KPI  = {'2024':'14,500','2023':'16,800','2022':'15,200','2021':'12,500','2020':'9,800',
+  '2019':'13,200','2018':'14,800','2017':'16,500','2016':'13,200','2015':'11,800','2014':'10,200','2013':'9,500'};
+
+/* PPI table data */
+const RL_PPI_DATA = {
+  '2024':[{lbl:'Rail freight',rate:125.9,yoy:+1.37},{lbl:'Compared to CPI (National)',rate:128.3,yoy:+2.80,cpi:true}],
+  '2023':[{lbl:'Rail freight',rate:124.2,yoy:+1.97},{lbl:'Compared to CPI (National)',rate:124.8,yoy:+5.32,cpi:true}],
+  '2022':[{lbl:'Rail freight',rate:121.8,yoy:+2.78},{lbl:'Compared to CPI (National)',rate:118.5,yoy:+2.87,cpi:true}],
+  '2021':[{lbl:'Rail freight',rate:118.5,yoy:-0.31},{lbl:'Compared to CPI (National)',rate:115.2,yoy:+3.20,cpi:true}],
+  '2020':[{lbl:'Rail freight',rate:118.9,yoy:-0.82},{lbl:'Compared to CPI (National)',rate:111.6,yoy:+0.68,cpi:true}],
+  '2019':[{lbl:'Rail freight',rate:119.9,yoy:+0.42},{lbl:'Compared to CPI (National)',rate:110.9,yoy:+0.66,cpi:true}],
+  '2018':[{lbl:'Rail freight',rate:119.4,yoy:+1.02},{lbl:'Compared to CPI (National)',rate:110.2,yoy:+1.02,cpi:true}],
+  '2017':[{lbl:'Rail freight',rate:118.2,yoy:+0.85},{lbl:'Compared to CPI (National)',rate:109.1,yoy:+3.71,cpi:true}],
+  '2016':[{lbl:'Rail freight',rate:117.2,yoy:+0.51},{lbl:'Compared to CPI (National)',rate:105.2,yoy:+2.14,cpi:true}],
+  '2015':[{lbl:'Rail freight',rate:116.6,yoy:+0.60},{lbl:'Compared to CPI (National)',rate:103.0,yoy:+2.10,cpi:true}],
+  '2014':[{lbl:'Rail freight',rate:115.9,yoy:+0.78},{lbl:'Compared to CPI (National)',rate:100.9,yoy:+3.15,cpi:true}],
+  '2013':[{lbl:'Rail freight',rate:115.0,yoy:+0.52},{lbl:'Compared to CPI (National)',rate:97.8,yoy:+2.10,cpi:true}],
+};
+
+/* Employment data */
+const RL_EMP_DATA = {
+  '2024':{pct:'24.1',jobs:'25,800',share:'8.2'},
+  '2023':{pct:'23.0',jobs:'25,500',share:'8.1'},
+  '2022':{pct:'22.0',jobs:'25,100',share:'8.0'},
+  '2021':{pct:'21.0',jobs:'24,800',share:'7.9'},
+  '2020':{pct:'20.0',jobs:'24,500',share:'7.8'},
+  '2019':{pct:'17.7',jobs:'24,200',share:'7.7'},
+  '2018':{pct:'18.0',jobs:'23,800',share:'7.6'},
+  '2017':{pct:'17.0',jobs:'23,100',share:'7.5'},
+  '2016':{pct:'17.0',jobs:'22,400',share:'7.4'},
+  '2015':{pct:'16.5',jobs:'21,600',share:'7.3'},
+  '2014':{pct:'16.0',jobs:'20,800',share:'7.2'},
+  '2013':{pct:'15.5',jobs:'20,100',share:'7.1'},
+};
+
+/* GVA data (RM billion) 2000-2023 */
+const RL_GVA_YRS  = ['2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023'];
+const RL_GVA_RAIL = [2.1,2.2,2.3,2.1,2.3,2.5,2.8,3.1,3.4,3.2,3.8,4.2,4.5,4.8,5.2,5.8,6.2,6.8,7.5,7.2,6.5,7.8,8.9,9.2];
+const RL_GVA_TRAN = [28,30,32,30,33,36,41,48,56,52,62,68,74,80,88,98,108,118,132,128,112,138,156,162];
+
+/* Equipment stock by year */
+const RL_EQSTOCK = {
+  '2024':{loco:62,lrt:528,mrt:172,ets:38},'2023':{loco:62,lrt:528,mrt:172,ets:38},
+  '2022':{loco:58,lrt:488,mrt:120,ets:36},'2021':{loco:55,lrt:462,mrt:86,ets:34},
+  '2020':{loco:55,lrt:462,mrt:86,ets:34},'2019':{loco:52,lrt:440,mrt:54,ets:32},
+  '2018':{loco:52,lrt:440,mrt:22,ets:32},'2017':{loco:50,lrt:420,mrt:0,ets:30},
+  '2016':{loco:50,lrt:400,mrt:0,ets:28},'2015':{loco:48,lrt:382,mrt:0,ets:24},
+  '2014':{loco:48,lrt:382,mrt:0,ets:20},'2013':{loco:46,lrt:362,mrt:0,ets:16},
+};
+
+/* Intermodal corridor transit times (hours, 2010-2024) */
+const RL_CORR = [
+  {name:'KL to Penang',    d:[11.2,10.8,10.5,10.2,10.0,9.8,9.5,9.2,9.0,8.8,9.5,9.2,8.8,8.5,8.2], x1:82,y1:98,x2:52,y2:28},
+  {name:'KL to Ipoh',      d:[5.8,5.5,5.2,5.0,4.8,4.5,4.5,4.2,4.0,3.8,4.5,4.2,3.8,3.5,3.5],       x1:82,y1:98,x2:58,y2:58},
+  {name:'KL to JB',        d:[14.5,14.0,13.5,13.2,12.8,12.5,12.0,11.8,11.5,11.2,12.0,11.5,10.8,10.5,10.2],x1:82,y1:98,x2:90,y2:126},
+  {name:'KL to Kota Bharu',d:[18.5,18.0,17.5,17.0,16.8,16.5,16.2,16.0,15.8,15.5,16.5,16.0,15.5,15.0,14.8],x1:82,y1:98,x2:108,y2:35},
+  {name:'Gemas to JB',     d:[4.8,4.5,4.2,4.0,3.8,3.5,3.2,3.0,2.8,2.5,3.5,3.0,2.8,2.5,2.2],        x1:88,y1:110,x2:90,y2:126},
+];
+
+let rlCurYear = '2024';
+let rlCorrIdx = 0;
+const RL_C = {};
+const RL_INIT = {
+  activity:rlInitActivity, economics:rlInitEconomics, incidents:rlInitIncidents,
+  sustainability:rlInitSustainability, gender:rlInitGender, development:rlInitDevelopment
+};
+
+function rlSwitchSub(el, sid) {
+  document.querySelectorAll('#p-rail .sn-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#p-rail .tab-content').forEach(p=>p.classList.remove('active'));
+  document.getElementById(sid).classList.add('active');
+  const key = sid.replace('rst-','');
+  if (RL_INIT[key]) setTimeout(()=>RL_INIT[key](), 30);
+}
+
+/* ── ACTIVITY ── */
+function rlInitActivity() {
+  if (RL_C.act) return;
+  const ctx = document.getElementById('r-actChart').getContext('2d');
+  RL_C.act = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:RL_YRS,
+      datasets:[
+        {label:'Bulk',data:RL_BULK,backgroundColor:'#6B8C00',stack:'s',order:2},
+        {label:'Non-bulk',data:RL_NONBULK,backgroundColor:'#0D3349',stack:'s',order:2},
+        {label:'Total',data:RL_TOTAL,type:'line',borderColor:'#CC3300',backgroundColor:'transparent',
+         borderWidth:2,pointRadius:2,pointBackgroundColor:'#CC3300',order:1,yAxisID:'y'}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{stacked:true,ticks:{font:{size:10}}},y:{stacked:true,ticks:{font:{size:10}},title:{display:true,text:'Million tonne-km',font:{size:10}}}},
+      plugins:{legend:{display:false},tooltip:{mode:'index'}}}
+  });
+}
+
+/* ── ECONOMICS ── */
+function rlRenderPPI(yr) {
+  const rows = RL_PPI_DATA[yr] || RL_PPI_DATA['2024'];
+  document.getElementById('r-ppiBody').innerHTML = rows.map(r=>{
+    const cls = r.yoy >= 0 ? 'pos' : 'neg';
+    const sign = r.yoy >= 0 ? '+' : '';
+    return `<tr${r.cpi?' class="cpi-row"':''}><td>${r.lbl}</td><td>${r.rate.toFixed(2)}</td><td class="${cls}">${sign}${r.yoy.toFixed(2)}%</td></tr>`;
+  }).join('');
+}
+function rlRenderEmpText(yr) {
+  const e = RL_EMP_DATA[yr] || RL_EMP_DATA['2024'];
+  const pct = parseFloat(e.pct);
+  document.getElementById('r-empText').innerHTML =
+    `In ${yr} the rail transport sector accounted for <strong>${e.jobs}</strong> jobs. This was <strong>${e.share}%</strong> of total transport, postal and warehousing industry employment and <strong>${e.pct}%</strong> female workforce participation.`;
+  if (RL_C.empDonut) {
+    RL_C.empDonut.data.datasets[0].data = [pct, 100-pct];
+    RL_C.empDonut.update();
+  }
+}
+function rlInitEconomics() {
+  rlRenderPPI(rlCurYear);
+  rlRenderEmpText(rlCurYear);
+  if (!RL_C.gva) {
+    const ctx = document.getElementById('r-gvaChart').getContext('2d');
+    RL_C.gva = new Chart(ctx, {
+      type:'bar',
+      data:{labels:RL_GVA_YRS,datasets:[
+        {label:'Rail & pipeline',data:RL_GVA_RAIL,backgroundColor:'#6B8C00',order:2},
+        {label:'Transport total',data:RL_GVA_TRAN,backgroundColor:'#0D3349',order:2}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{x:{ticks:{font:{size:9},maxTicksLimit:12}},y:{ticks:{font:{size:10}},title:{display:true,text:'RM billion',font:{size:10}}}},
+        plugins:{legend:{display:false},tooltip:{mode:'index'}}}
+    });
+  }
+  if (!RL_C.empDonut) {
+    const pct = parseFloat((RL_EMP_DATA[rlCurYear]||RL_EMP_DATA['2024']).pct);
+    const ctx2 = document.getElementById('r-empDonut').getContext('2d');
+    RL_C.empDonut = new Chart(ctx2, {
+      type:'doughnut',
+      data:{labels:['Female','Male'],datasets:[{data:[pct,100-pct],backgroundColor:['#BFCF40','#0D3349'],borderWidth:1}]},
+      options:{responsive:true,maintainAspectRatio:true,cutout:'68%',
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw.toFixed(1)}%`}}}}
+    });
+  }
+}
+
+/* ── INCIDENTS ── */
+function rlHighlightInc(yr) {
+  if (!RL_C.inc) return;
+  RL_C.inc.data.datasets[0].backgroundColor = RL_INC_LBL.map(l=>l===yr?'#CC3300':'#0D3349');
+  RL_C.inc.update();
+}
+function rlInitIncidents() {
+  if (RL_C.inc) { rlHighlightInc(rlCurYear); return; }
+  const ctx = document.getElementById('r-incChart').getContext('2d');
+  RL_C.inc = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:RL_INC_LBL,
+      datasets:[{data:RL_INC_D,backgroundColor:RL_INC_LBL.map(l=>l===rlCurYear?'#CC3300':'#0D3349'),
+        datalabels:{display:true}}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}},title:{display:true,text:'Fatalities',font:{size:10}}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Fatalities: ${c.raw}`}}}},
+  });
+  // draw value labels
+  RL_C.inc.options.animation = {onComplete: function(){
+    const chart = this; const ctx2 = chart.ctx;
+    chart.data.datasets.forEach((dataset,i)=>{
+      chart.getDatasetMeta(i).data.forEach((bar,j)=>{
+        ctx2.fillStyle='#fff'; ctx2.font='bold 9px Arial'; ctx2.textAlign='center'; ctx2.textBaseline='bottom';
+        ctx2.fillText(dataset.data[j], bar.x, bar.y-1);
+      });
+    });
+  }};
+  RL_C.inc.update();
+}
+
+/* ── SUSTAINABILITY ── */
+function rlRenderSusKPI(yr) {
+  const gg = RL_SUS_KPI[yr]||'478';
+  const pct = RL_SUS_PCT[yr]||1.8;
+  document.getElementById('r-susText').innerHTML =
+    `In ${yr} rail (excl electric) emissions reached <strong>${gg} gigagrams</strong> of CO₂ equivalent.`;
+  document.getElementById('r-susDonutText').innerHTML =
+    `<strong>${pct}%</strong><br>${yr} saw rail account for <strong>${pct}%</strong> of direct greenhouse gas emissions from transport.`;
+  if (RL_C.susDonut) {
+    RL_C.susDonut.data.datasets[0].data = [pct, 100-pct];
+    RL_C.susDonut.update();
+  }
+}
+function rlInitSustainability() {
+  rlRenderSusKPI(rlCurYear);
+  if (!RL_C.sus) {
+    const ctx = document.getElementById('r-susChart').getContext('2d');
+    RL_C.sus = new Chart(ctx, {
+      type:'line',
+      data:{labels:RL_SUS_YRS,datasets:[{data:RL_SUS_D,borderColor:'#6B8C00',backgroundColor:'rgba(107,140,0,.15)',fill:true,borderWidth:2,pointRadius:2}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{x:{ticks:{font:{size:9},maxTicksLimit:12}},y:{ticks:{font:{size:10}},title:{display:true,text:'Gg CO₂e',font:{size:10}}}},
+        plugins:{legend:{display:false}}}
+    });
+  }
+  if (!RL_C.susDonut) {
+    const pct = RL_SUS_PCT[rlCurYear]||1.8;
+    const ctx2 = document.getElementById('r-susDonut').getContext('2d');
+    RL_C.susDonut = new Chart(ctx2, {
+      type:'doughnut',
+      data:{labels:['Rail','Other transport'],datasets:[{data:[pct,100-pct],backgroundColor:['#0D3349','#BFCF40'],borderWidth:1}]},
+      options:{responsive:true,maintainAspectRatio:true,cutout:'68%',plugins:{legend:{display:false}}}
+    });
+  }
+}
+
+/* ── GENDER ── */
+function rlInitGender() {
+  if (RL_C.gen) return;
+  const ctx = document.getElementById('r-genChart').getContext('2d');
+  RL_C.gen = new Chart(ctx, {
+    type:'bar',
+    data:{labels:RL_YRS,datasets:[
+      {label:'Female',data:RL_GEN_FEM,backgroundColor:'#BFCF40',stack:'s',order:2},
+      {label:'Male',  data:RL_GEN_MAL,backgroundColor:'#6B8C00',stack:'s',order:2},
+      {label:'Total', data:RL_GEN_TOT,type:'line',borderColor:'#0D3349',backgroundColor:'transparent',
+       borderWidth:2,pointRadius:2,order:1,yAxisID:'y'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{stacked:true,ticks:{font:{size:10}}},y:{stacked:true,ticks:{font:{size:10}},title:{display:true,text:'Staff number',font:{size:10}}}},
+      plugins:{legend:{display:false},tooltip:{mode:'index'}}}
+  });
+}
+
+/* ── DEVELOPMENT ── */
+function rlGetDevData() {
+  const s = document.getElementById('r-secSel')?.value||'all';
+  const pf = s==='pub'?0.70:s==='priv'?0.30:1.0;
+  const tf = s==='pub'?0.65:s==='priv'?0.35:1.0;
+  return [RL_DEV_RAIL.map(v=>+(v*pf).toFixed(0)), RL_DEV_TRAN.map(v=>+(v*tf).toFixed(0))];
+}
+function rlUpdateDev() {
+  if (!RL_C.dev) return;
+  const [rail,tran] = rlGetDevData();
+  RL_C.dev.data.datasets[0].data = rail;
+  RL_C.dev.data.datasets[1].data = tran;
+  RL_C.dev.update();
+}
+function rlInitDevelopment() {
+  if (RL_C.dev) return;
+  const [rail,tran] = rlGetDevData();
+  const ctx = document.getElementById('r-devChart').getContext('2d');
+  RL_C.dev = new Chart(ctx, {
+    type:'bar',
+    data:{labels:RL_DEV_YRS,datasets:[
+      {label:'Rail infrastructure',data:rail,backgroundColor:'#6B8C00',order:2},
+      {label:'Total transport',    data:tran,backgroundColor:'#0D3349',order:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{ticks:{font:{size:9},maxTicksLimit:13}},y:{ticks:{font:{size:10}},title:{display:true,text:'RM million',font:{size:10}}}},
+      plugins:{legend:{display:false},tooltip:{mode:'index'}}}
+  });
+}
+
+/* ── CORRIDOR TIME SERIES ── */
+function rlInitCorridorChart() {
+  if (RL_C.ts) return;
+  const ctx = document.getElementById('r-tsChart').getContext('2d');
+  RL_C.ts = new Chart(ctx, {
+    type:'line',
+    data:{labels:RL_YRS,datasets:[{
+      data:RL_CORR[0].d,
+      borderColor:'#6B8C00',backgroundColor:'rgba(107,140,0,.15)',
+      fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#6B8C00'
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}},title:{display:true,text:'Hours',font:{size:10}}}},
+      plugins:{legend:{display:false}}}
+  });
+}
+function rlSwitchCorr(el, idx) {
+  document.querySelectorAll('#r-corrNav .pt').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  rlCorrIdx = idx;
+  const c = RL_CORR[idx];
+  document.getElementById('r-corrTitle').textContent  = c.name;
+  document.getElementById('r-corrLegend').textContent = c.name;
+  // Update Leaflet route line
+  rlDrawRoute(idx);
+  // Update chart
+  rlInitCorridorChart();
+  RL_C.ts.data.datasets[0].data = c.d;
+  RL_C.ts.update();
+}
+
+/* ── YEAR CHANGE ── */
+function rlYearChange(yr) {
+  rlCurYear = yr;
+  // Activity KPI
+  document.getElementById('ra-year').textContent = yr;
+  document.getElementById('ra-tkm').textContent  = RL_ACT_KPI[yr]||'—';
+  // Incidents KPI
+  document.getElementById('ri-year').textContent   = yr;
+  document.getElementById('ri-deaths').textContent = RL_INC_KPI[yr]||'—';
+  if (RL_C.inc) rlHighlightInc(yr);
+  // Sustainability
+  rlRenderSusKPI(yr);
+  // Gender KPI
+  document.getElementById('rg-year').textContent = yr;
+  document.getElementById('rg-pct').textContent  = RL_GEN_KPI[yr]||'—';
+  // Development KPI
+  document.getElementById('rd-year').textContent = yr;
+  document.getElementById('rd-val').textContent  = RL_DEV_KPI[yr]||'—';
+  // Economics
+  rlRenderPPI(yr); rlRenderEmpText(yr);
+  // Equipment stock
+  const eq = RL_EQSTOCK[yr]||RL_EQSTOCK['2024'];
+  document.getElementById('r-eq-loco').textContent = eq.loco;
+  document.getElementById('r-eq-lrt').textContent  = eq.lrt;
+  document.getElementById('r-eq-mrt').textContent  = eq.mrt===0?'N/A':eq.mrt;
+  document.getElementById('r-eq-ets').textContent  = eq.ets;
+}
+
 </script>
 </body>
 </html>
